@@ -25,6 +25,21 @@ import { HomeScreenProps } from '../types/navigation';
 import { COLORS } from '../constants/theme';
 import { styles } from '../styles/HomeScreen.styles';
 
+/**
+ * Türkçe karakter duyarlı küçük harfe çevirme yardımcısı
+ */
+function toTurkishLowerCase(text: string = ''): string {
+  return text
+    .replace(/İ/g, 'i')
+    .replace(/I/g, 'ı')
+    .replace(/Ğ/g, 'ğ')
+    .replace(/Ü/g, 'ü')
+    .replace(/Ş/g, 'ş')
+    .replace(/Ö/g, 'ö')
+    .replace(/Ç/g, 'ç')
+    .toLowerCase();
+}
+
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -77,18 +92,31 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     return getAvailableDistricts(pharmacies);
   }, [pharmacies]);
 
-  // Filter & Sort logic
+  // Türkçe karakter ve kelime arama uyumlu Filtreleme & Sıralama Mantığı
   const filteredPharmacies = useMemo(() => {
+    const normQuery = toTurkishLowerCase(searchQuery.trim());
+    const normSelectedDist = toTurkishLowerCase(selectedDistrict);
+
     return pharmacies
       .filter(item => {
+        const normName = toTurkishLowerCase(item.name);
+        const normDist = toTurkishLowerCase(item.dist);
+        const normAddr = toTurkishLowerCase(item.address);
+
+        // Arama Çubuğu Eşleşmesi (Ad, İlçe veya Adres)
         const matchSearch =
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.dist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.address.toLowerCase().includes(searchQuery.toLowerCase());
+          normQuery === '' ||
+          normName.includes(normQuery) ||
+          normDist.includes(normQuery) ||
+          normAddr.includes(normQuery);
 
+        // İlçe Filtre Eşleşmesi
         const matchDistrict =
-          selectedDistrict === 'Tüm İlçeler' || item.dist.toLowerCase() === selectedDistrict.toLowerCase();
+          selectedDistrict === 'Tüm İlçeler' ||
+          normDist === normSelectedDist ||
+          normAddr.includes(normSelectedDist);
 
+        // Nöbet Durumu Eşleşmesi
         const matchDuty =
           selectedDutyType === 'all' || item.dutyType === selectedDutyType;
 
@@ -100,11 +128,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         }
         const distA = parseFloat(a.distance);
         const distB = parseFloat(b.distance);
-        return distA - distB;
+        return (isNaN(distA) ? 0 : distA) - (isNaN(distB) ? 0 : distB);
       });
   }, [pharmacies, searchQuery, selectedDistrict, selectedDutyType, sortBy]);
 
-  const isFilterActive = selectedDistrict !== 'Tüm İlçeler' || selectedDutyType !== 'all' || sortBy !== 'distance';
+  // Aktif filtre kontrolü
+  const isFilterActive =
+    selectedDistrict !== 'Tüm İlçeler' ||
+    selectedDutyType !== 'all' ||
+    sortBy !== 'distance' ||
+    searchQuery.trim() !== '';
 
   const resetFilters = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
