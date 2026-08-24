@@ -48,11 +48,13 @@ export default function FilterModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* NÖBET DURUMU */}
-            <Text style={styles.filterSectionTitle}>Nöbet Durumu</Text>
+            {/* ECZANE TÜRÜ & NÖBET DURUMU */}
+            <Text style={styles.filterSectionTitle}>Eczane Türü & Nöbet Durumu</Text>
             <View style={styles.filterRow}>
               {[
-                { key: 'all' as DutyType, label: 'Tümü' },
+                { key: 'all' as DutyType, label: 'Tüm Eczaneler' },
+                { key: 'nobetci' as DutyType, label: 'Nöbetçiler' },
+                { key: 'sabit' as DutyType, label: 'Normal (09:00 - 19:00)' },
                 { key: '24saat' as DutyType, label: '24 Saat Nöbetçi' },
                 { key: 'gece' as DutyType, label: 'Gece Nöbetçisi' },
               ].map((item) => (

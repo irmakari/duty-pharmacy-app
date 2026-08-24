@@ -1,9 +1,10 @@
 import { Pharmacy } from '../types/pharmacy';
 import { MOCK_PHARMACIES } from '../data/mockPharmacies';
 import { extractDistrictFromAddress } from '../utils/districtExtractor';
+import { fetchPharmaciesFromSupabase } from './supabaseClient';
 
 /**
- * CollectAPI Duty Pharmacy API Integration Service with Rate-limiting & Cache
+ * CollectAPI & Supabase & Mock Duty Pharmacy Integration Service
  */
 export const COLLECT_API_KEY: string =
   process.env.EXPO_PUBLIC_COLLECT_API_KEY ||
@@ -13,6 +14,9 @@ export const COLLECT_API_KEY: string =
 export const USE_MOCK_DATA: boolean =
   process.env.EXPO_PUBLIC_USE_MOCK_DATA === 'true' ||
   process.env.USE_MOCK_DATA === 'true';
+
+export const USE_SUPABASE: boolean =
+  process.env.EXPO_PUBLIC_USE_SUPABASE === 'true';
 
 interface CollectApiResultItem {
   name: string;
@@ -31,7 +35,7 @@ interface CollectApiResponse {
 }
 
 // ------------------------------------------------------------------
-// CACHE SYSTEM (API kotalarını korumak için 10 dakikalık hafıza önbelleği)
+// CACHE SYSTEM (10 dakikalık hafıza önbelleği)
 // ------------------------------------------------------------------
 interface CacheEntry {
   timestamp: number;
@@ -39,7 +43,7 @@ interface CacheEntry {
 }
 
 const apiCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 dakika TTL
+const CACHE_TTL_MS = 10 * 60 * 1000;
 
 function getFormattedKey(rawKey: string): string {
   const clean = rawKey.trim();
@@ -54,16 +58,27 @@ export async function fetchDutyPharmacies(
   ilce: string = '',
   forceRefresh: boolean = false
 ): Promise<Pharmacy[]> {
-  const rawKey = COLLECT_API_KEY.trim();
+  // 1. Supabase'den Çekme Modu Açıksa (EXPO_PUBLIC_USE_SUPABASE=true)
+  if (USE_SUPABASE) {
+    try {
+      const supabasePharmacies = await fetchPharmaciesFromSupabase(ilce);
+      if (supabasePharmacies && supabasePharmacies.length > 0) {
+        return supabasePharmacies;
+      }
+    } catch (err) {
+      console.warn('Supabase fetch failed, falling back to local dataset:', err);
+    }
+  }
 
-  // Mock bayrağı (EXPO_PUBLIC_USE_MOCK_DATA=true) açıksa veya API Key yoksa mock veriyi dön
+  // 2. Mock Modu Açıksa (EXPO_PUBLIC_USE_MOCK_DATA=true) veya API Key yoksa 3.993'lük yerel veriyi dön
+  const rawKey = COLLECT_API_KEY.trim();
   if (USE_MOCK_DATA || !rawKey) {
     return MOCK_PHARMACIES;
   }
 
   const cacheKey = `${il.toLowerCase()}-${(ilce || 'all').toLowerCase()}`;
 
-  // Önbellek kontrolü (Zorunlu yenileme istenmediyse ve 10 dk dolmadıysa önbellekten sun)
+  // 3. Önbellek kontrolü
   if (!forceRefresh && apiCache.has(cacheKey)) {
     const entry = apiCache.get(cacheKey)!;
     if (Date.now() - entry.timestamp < CACHE_TTL_MS) {
@@ -71,6 +86,7 @@ export async function fetchDutyPharmacies(
     }
   }
 
+  // 4. Canlı CollectAPI İsteği
   try {
     let url = `https://api.collectapi.com/health/dutyPharmacy?il=${encodeURIComponent(il)}`;
     if (ilce && ilce !== 'Tüm İlçeler') {
@@ -119,7 +135,6 @@ export async function fetchDutyPharmacies(
         isOpenNow: true,
       }));
 
-      // Cache güncelle
       apiCache.set(cacheKey, {
         timestamp: Date.now(),
         data: formattedPharmacies,

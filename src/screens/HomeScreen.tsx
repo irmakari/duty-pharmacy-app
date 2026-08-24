@@ -116,9 +116,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           normDist === normSelectedDist ||
           normAddr.includes(normSelectedDist);
 
-        // Nöbet Durumu Eşleşmesi
+        // Nöbet / Eczane Türü Eşleşmesi
         const matchDuty =
-          selectedDutyType === 'all' || item.dutyType === selectedDutyType;
+          selectedDutyType === 'all'
+            ? true
+            : selectedDutyType === 'nobetci'
+            ? item.dutyType === '24saat' || item.dutyType === 'gece'
+            : item.dutyType === selectedDutyType;
 
         return matchSearch && matchDistrict && matchDuty;
       })

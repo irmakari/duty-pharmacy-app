@@ -8,6 +8,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "fetch-pharmacies": "node scripts/fetchIstanbulPharmacies.js",
+    "fetch-metropol": "node scripts/fetchMetropolitanPharmacies.js",
+    "seed-supabase": "node scripts/seedSupabase.js",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -17,6 +20,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "@react-navigation/native-stack": "^7.3.16",
+    "@supabase/supabase-js": "^2.112.4",
     "expo": "~54.0.36",
     "expo-constants": "~18.0.13",
     "expo-font": "~14.0.12",
@@ -42,6 +46,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "dotenv": "^17.4.2",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"

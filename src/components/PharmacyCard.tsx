@@ -19,7 +19,29 @@ export default function PharmacyCard({
   onToggleFavorite,
   onPressCard,
 }: PharmacyCardProps) {
-  const is24h = item.dutyType === '24saat';
+  const getBadgeStyles = (dutyType: '24saat' | 'gece' | 'sabit') => {
+    if (dutyType === '24saat') {
+      return {
+        badgeBg: styles.badgeGreen,
+        dotBg: COLORS.primary,
+        textColor: COLORS.primaryDark,
+      };
+    }
+    if (dutyType === 'gece') {
+      return {
+        badgeBg: styles.badgeAmber,
+        dotBg: COLORS.warning,
+        textColor: '#B45309',
+      };
+    }
+    return {
+      badgeBg: styles.badgeBlue,
+      dotBg: COLORS.secondary,
+      textColor: '#0369A1',
+    };
+  };
+
+  const badgeStyle = getBadgeStyles(item.dutyType);
 
   const handleCall = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -40,19 +62,9 @@ export default function PharmacyCard({
     >
       {/* ÜST ROZET VE MESAFE */}
       <View style={styles.cardHeader}>
-        <View style={[styles.badge, is24h ? styles.badgeGreen : styles.badgeAmber]}>
-          <View
-            style={[
-              styles.badgeDot,
-              { backgroundColor: is24h ? COLORS.primary : COLORS.warning }
-            ]}
-          />
-          <Text
-            style={[
-              styles.badgeText,
-              { color: is24h ? COLORS.primaryDark : '#B45309' }
-            ]}
-          >
+        <View style={[styles.badge, badgeStyle.badgeBg]}>
+          <View style={[styles.badgeDot, { backgroundColor: badgeStyle.dotBg }]} />
+          <Text style={[styles.badgeText, { color: badgeStyle.textColor }]}>
             {item.dutyTypeLabel}
           </Text>
         </View>
@@ -92,7 +104,7 @@ export default function PharmacyCard({
         </Text>
       </View>
 
-      {/* NÖBET SAATLERİ */}
+      {/* NÖBET / ÇALIŞMA SAATLERİ */}
       <View style={styles.hoursRow}>
         <Feather name="clock" size={13} color={COLORS.primary} />
         <Text style={styles.hoursText}>{item.dutyHours}</Text>

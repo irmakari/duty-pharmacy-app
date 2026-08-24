@@ -1,4 +1,4 @@
-export type DutyType = '24saat' | 'gece' | 'all';
+export type DutyType = 'sabit' | '24saat' | 'gece' | 'nobetci' | 'all';
 
 export interface Pharmacy {
   id: string;
@@ -10,10 +10,11 @@ export interface Pharmacy {
   phone: string;
   loc?: string;
   dutyHours: string;
-  dutyType: '24saat' | 'gece';
+  dutyType: 'sabit' | '24saat' | 'gece';
   dutyTypeLabel: string;
   distance: string;
   isOpenNow: boolean;
+  workingHours?: string;
   rating?: number;
 }
 

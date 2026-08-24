@@ -36,6 +36,9 @@ export const styles = StyleSheet.create({
   badgeAmber: {
     backgroundColor: COLORS.warningLight,
   },
+  badgeBlue: {
+    backgroundColor: COLORS.secondaryLight,
+  },
   badgeDot: {
     width: 6,
     height: 6,
