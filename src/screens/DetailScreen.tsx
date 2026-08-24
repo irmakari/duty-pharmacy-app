@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import MapView, { Marker } from 'react-native-maps';
 import * as Haptics from 'expo-haptics';
 import { DetailScreenProps } from '../types/navigation';
 import { COLORS } from '../constants/theme';
@@ -19,6 +20,20 @@ import { styles } from '../styles/DetailScreen.styles';
 export default function DetailScreen({ route, navigation }: DetailScreenProps) {
   const { pharmacy, isFav: initialFav } = route.params;
   const [isFav, setIsFav] = useState<boolean>(initialFav || false);
+
+  // Koordinat ayrıştırma ("40.9876,29.0234" -> lat, lng)
+  const coords = useMemo(() => {
+    if (pharmacy.loc && pharmacy.loc.includes(',')) {
+      const [latStr, lngStr] = pharmacy.loc.split(',');
+      const lat = parseFloat(latStr.trim());
+      const lng = parseFloat(lngStr.trim());
+      if (!isNaN(lat) && !isNaN(lng)) {
+        return { latitude: lat, longitude: lng };
+      }
+    }
+    // Varsayılan koordinatlar (Kadıköy Moda)
+    return { latitude: 40.9876, longitude: 29.0234 };
+  }, [pharmacy.loc]);
 
   const handleFavPress = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -183,28 +198,44 @@ export default function DetailScreen({ route, navigation }: DetailScreenProps) {
           </View>
         </View>
 
-        {/* HARİTA PREVIEW */}
+        {/* CANLI HARİTA GÖRÜNÜMÜ */}
         <View style={styles.detailSectionCard}>
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionIconBg}>
               <Feather name="map" size={18} color={COLORS.primary} />
             </View>
-            <Text style={styles.sectionTitle}>Harita Ön İzleme</Text>
+            <Text style={styles.sectionTitle}>Harita Görünümü</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.mapVisualPreview}
-            onPress={handleOpenMap}
-            activeOpacity={0.9}
-          >
-            <View style={styles.mapPinPulse}>
-              <Ionicons name="location-sharp" size={32} color={COLORS.primary} />
-            </View>
-            <Text style={styles.mapVisualText}>{pharmacy.name}</Text>
-            <Text style={styles.mapVisualSubtext}>
-              Google Maps veya Apple Maps ile açmak için dokunun
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.mapView}
+              initialRegion={{
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                latitudeDelta: 0.008,
+                longitudeDelta: 0.008,
+              }}
+              scrollEnabled={false}
+              zoomEnabled={true}
+            >
+              <Marker
+                coordinate={{ latitude: coords.latitude, longitude: coords.longitude }}
+                title={pharmacy.name}
+                description={pharmacy.address}
+                pinColor={COLORS.primary}
+              />
+            </MapView>
+
+            <TouchableOpacity
+              style={styles.mapOverlayBtn}
+              onPress={handleOpenMap}
+              activeOpacity={0.85}
+            >
+              <Feather name="external-link" size={13} color="#FFFFFF" />
+              <Text style={styles.mapOverlayBtnText}>Haritalar Uygulamasında Aç</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ACİL DURUM UYARISI */}

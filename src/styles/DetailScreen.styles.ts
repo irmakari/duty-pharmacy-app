@@ -236,37 +236,35 @@ export const styles = StyleSheet.create({
     color: '#15803D',
   },
 
-  mapVisualPreview: {
-    height: 140,
-    backgroundColor: COLORS.borderLight,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+  // REAL MAP VIEW STYLES
+  mapContainer: {
+    height: 200,
+    borderRadius: 16,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderStyle: 'dashed',
-    padding: 16,
+    borderColor: COLORS.border,
+    position: 'relative',
   },
-  mapPinPulse: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: COLORS.primaryLight,
-    justifyContent: 'center',
+  mapView: {
+    width: '100%',
+    height: '100%',
+  },
+  mapOverlayBtn: {
+    position: 'absolute',
+    bottom: 10,
+    alignSelf: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    gap: 6,
   },
-  mapVisualText: {
+  mapOverlayBtnText: {
     fontFamily: FONTS.semiBold,
-    fontSize: 14,
-    color: COLORS.textPrimary,
-  },
-  mapVisualSubtext: {
-    fontFamily: FONTS.regular,
     fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 2,
-    textAlign: 'center',
+    color: '#FFFFFF',
   },
 
   emergencyWarningCard: {
