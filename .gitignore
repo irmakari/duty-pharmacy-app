@@ -9,6 +9,13 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Environment variables & secrets (VERY IMPORTANT)
+.env
+.env.local
+.env.*
+.env*.local
+*.env
+
 # Native
 .kotlin/
 *.orig.*
@@ -29,9 +36,6 @@ yarn-error.*
 # macOS
 .DS_Store
 *.pem
-
-# local env files
-.env*.local
 
 # typescript
 *.tsbuildinfo
