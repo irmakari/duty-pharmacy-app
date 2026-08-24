@@ -10,6 +10,10 @@ export const COLLECT_API_KEY: string =
   process.env.COLLECT_API_KEY ||
   '';
 
+export const USE_MOCK_DATA: boolean =
+  process.env.EXPO_PUBLIC_USE_MOCK_DATA === 'true' ||
+  process.env.USE_MOCK_DATA === 'true';
+
 interface CollectApiResultItem {
   name: string;
   dist: string;
@@ -52,8 +56,8 @@ export async function fetchDutyPharmacies(
 ): Promise<Pharmacy[]> {
   const rawKey = COLLECT_API_KEY.trim();
 
-  // API Key tanımlanmamışsa doğrudan Mock veriyi dön
-  if (!rawKey) {
+  // Mock bayrağı (EXPO_PUBLIC_USE_MOCK_DATA=true) açıksa veya API Key yoksa mock veriyi dön
+  if (USE_MOCK_DATA || !rawKey) {
     return MOCK_PHARMACIES;
   }
 
