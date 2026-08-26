@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { Pharmacy } from '../types/pharmacy';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -11,9 +11,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  */
 export async function fetchPharmaciesFromSupabase(district?: string): Promise<Pharmacy[]> {
   try {
+    if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+      return [];
+    }
+
     let query = supabase.from('pharmacies').select('*');
 
-    if (district && district !== 'Tüm İlçeler') {
+    if (district && district !== 'Tüm Şehirler' && district !== 'Tüm İlçeler') {
       query = query.eq('dist', district);
     }
 
