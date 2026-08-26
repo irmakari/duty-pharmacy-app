@@ -12,8 +12,7 @@ export const COLLECT_API_KEY: string =
   '';
 
 export const USE_MOCK_DATA: boolean =
-  process.env.EXPO_PUBLIC_USE_MOCK_DATA === 'true' ||
-  process.env.USE_MOCK_DATA === 'true';
+  process.env.EXPO_PUBLIC_USE_MOCK_DATA !== 'false';
 
 export const USE_SUPABASE: boolean =
   process.env.EXPO_PUBLIC_USE_SUPABASE === 'true';
