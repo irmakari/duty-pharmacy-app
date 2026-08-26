@@ -13,6 +13,7 @@ export interface Pharmacy {
   dutyType: 'sabit' | '24saat' | 'gece';
   dutyTypeLabel: string;
   distance: string;
+  numericDistance?: number;
   isOpenNow: boolean;
   workingHours?: string;
   rating?: number;

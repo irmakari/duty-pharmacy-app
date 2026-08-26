@@ -10,6 +10,8 @@ interface DutyFilterTabsProps {
   onSelectDutyType: (duty: DutyType) => void;
   sortBy: SortByOption;
   onToggleSort: () => void;
+  hasLocation?: boolean;
+  onRefreshLocation?: () => void;
 }
 
 export default function DutyFilterTabs({
@@ -17,8 +19,20 @@ export default function DutyFilterTabs({
   onSelectDutyType,
   sortBy,
   onToggleSort,
+  hasLocation = false,
+  onRefreshLocation,
 }: DutyFilterTabsProps) {
   const isNearestActive = sortBy === 'distance';
+
+  const handleNearestPress = () => {
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
+    if (!hasLocation && onRefreshLocation) {
+      onRefreshLocation();
+    }
+    if (sortBy !== 'distance') {
+      onToggleSort();
+    }
+  };
 
   return (
     <View style={styles.tabsContainer}>
@@ -30,14 +44,11 @@ export default function DutyFilterTabs({
         {/* EN YAKIN CHIP */}
         <TouchableOpacity
           style={[styles.tabBtn, isNearestActive && styles.tabBtnActiveNearest]}
-          onPress={() => {
-            if (Platform.OS !== 'web') Haptics.selectionAsync();
-            onToggleSort();
-          }}
+          onPress={handleNearestPress}
           activeOpacity={0.8}
         >
           <Ionicons
-            name="location"
+            name={hasLocation ? "location" : "location-outline"}
             size={15}
             color={isNearestActive ? COLORS.primaryDark : COLORS.textMuted}
             style={{ marginRight: 5 }}
@@ -45,6 +56,9 @@ export default function DutyFilterTabs({
           <Text style={[styles.tabText, isNearestActive && styles.tabTextActiveNearest]}>
             En Yakın
           </Text>
+          {hasLocation && (
+            <View style={styles.activeDot} />
+          )}
         </TouchableOpacity>
 
         {/* TÜM ECZANELER */}
@@ -152,5 +166,12 @@ const styles = StyleSheet.create({
   tabTextActiveNearest: {
     color: COLORS.primaryDark,
     fontFamily: 'Poppins_700Bold',
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
+    marginLeft: 6,
   },
 });

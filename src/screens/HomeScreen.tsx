@@ -21,7 +21,14 @@ import CityPickerModal from '../components/CityPickerModal';
 import PharmacyCard from '../components/PharmacyCard';
 import PharmacyDetailView from '../components/PharmacyDetailView';
 import { fetchDutyPharmacies } from '../services/pharmacyApi';
-import { getAvailableDistricts } from '../utils/districtExtractor';
+import { getAvailableDistricts, isPharmacyInDistrict } from '../utils/districtExtractor';
+import {
+  getUserCurrentLocation,
+  parseCoordinates,
+  calculateHaversineDistance,
+  formatDistanceText,
+  Coordinates,
+} from '../utils/location';
 import { Pharmacy, DutyType, SortByOption, FavoritesMap } from '../types/pharmacy';
 import { HomeScreenProps } from '../types/navigation';
 import { COLORS } from '../constants/theme';
@@ -50,6 +57,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   
   // Filter States
   const [selectedDistrict, setSelectedDistrict] = useState<string>('Tüm Şehirler');
@@ -63,11 +71,19 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // Active Pharmacy selection for Split View (Desktop)
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(null);
 
+  // Kullanıcı canlı GPS konumunu alma
+  const fetchUserLocation = useCallback(async () => {
+    const loc = await getUserCurrentLocation();
+    if (loc) {
+      setUserLocation(loc);
+    }
+  }, []);
+
   // Data fetching (with cache & rate limit protection)
   const loadData = useCallback(async (isRefresh: boolean = false) => {
     try {
       if (!isRefresh) setLoading(true);
-      const data = await fetchDutyPharmacies('Istanbul', selectedDistrict, isRefresh);
+      const data = await fetchDutyPharmacies('Istanbul', '', isRefresh);
       setPharmacies(data);
     } catch (error) {
       console.error('Error fetching pharmacies:', error);
@@ -75,15 +91,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedDistrict]);
+  }, []);
 
   useEffect(() => {
+    fetchUserLocation();
     loadData();
-  }, [loadData]);
+  }, [loadData, fetchUserLocation]);
 
   const onRefresh = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
+    fetchUserLocation();
     loadData(true);
   };
 
@@ -100,12 +118,31 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     return getAvailableDistricts(pharmacies);
   }, [pharmacies]);
 
+  // Kullanıcı konumu varsa her eczane için gerçek mesafeyi hesaplama
+  const pharmaciesWithCalculatedDistance = useMemo(() => {
+    if (!userLocation) return pharmacies;
+    return pharmacies.map(item => {
+      const coords = parseCoordinates(item.loc);
+      if (!coords) return item;
+      const distKm = calculateHaversineDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        coords.latitude,
+        coords.longitude
+      );
+      return {
+        ...item,
+        numericDistance: distKm,
+        distance: formatDistanceText(distKm),
+      };
+    });
+  }, [pharmacies, userLocation]);
+
   // Türkçe karakter ve kelime arama uyumlu Filtreleme & Sıralama Mantığı
   const filteredPharmacies = useMemo(() => {
     const normQuery = toTurkishLowerCase(searchQuery.trim());
-    const normSelectedDist = toTurkishLowerCase(selectedDistrict);
 
-    return pharmacies
+    return pharmaciesWithCalculatedDistance
       .filter(item => {
         const normName = toTurkishLowerCase(item.name);
         const normDist = toTurkishLowerCase(item.dist);
@@ -118,12 +155,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           normDist.includes(normQuery) ||
           normAddr.includes(normQuery);
 
-        // İlçe / Şehir Filtre Eşleşmesi
-        const matchDistrict =
-          selectedDistrict === 'Tüm Şehirler' ||
-          selectedDistrict === 'Tüm İlçeler' ||
-          normDist === normSelectedDist ||
-          normAddr.includes(normSelectedDist);
+        // İlçe / Şehir Filtre Eşleşmesi (Resmi İlçe, Mahalle ve 1.5 km Yakındaki Eczaneler)
+        const matchDistrict = isPharmacyInDistrict(
+          item.dist,
+          item.address,
+          selectedDistrict,
+          item.numericDistance
+        );
 
         // Nöbet / Eczane Türü Eşleşmesi
         const matchDuty =
@@ -141,11 +179,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         if (sortBy === 'name') {
           return a.name.localeCompare(b.name, 'tr');
         }
-        const distA = parseFloat(a.distance);
-        const distB = parseFloat(b.distance);
-        return (isNaN(distA) ? 0 : distA) - (isNaN(distB) ? 0 : distB);
+        const distA = a.numericDistance !== undefined ? a.numericDistance : parseFloat(a.distance);
+        const distB = b.numericDistance !== undefined ? b.numericDistance : parseFloat(b.distance);
+        return (isNaN(distA) ? 999999 : distA) - (isNaN(distB) ? 999999 : distB);
       });
-  }, [pharmacies, searchQuery, selectedDistrict, selectedDutyType, sortBy]);
+  }, [pharmaciesWithCalculatedDistance, searchQuery, selectedDistrict, selectedDutyType, sortBy]);
 
   // Masaüstünde seçili eczane belirleme
   const selectedPharmacy = useMemo(() => {
@@ -221,6 +259,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         onSelectDutyType={setSelectedDutyType}
         sortBy={sortBy}
         onToggleSort={() => setSortBy(prev => (prev === 'distance' ? 'name' : 'distance'))}
+        hasLocation={!!userLocation}
+        onRefreshLocation={fetchUserLocation}
       />
 
       {/* PHARMACY LIST */}
