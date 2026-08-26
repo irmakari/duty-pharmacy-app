@@ -103,11 +103,11 @@ export function getAvailableDistricts(pharmacies: Pharmacy[]): string[] {
   const districtSet = new Set<string>();
 
   pharmacies.forEach(item => {
-    if (item.dist && item.dist !== 'Tüm İlçeler') {
+    if (item.dist && item.dist !== 'Tüm Şehirler' && item.dist !== 'Tüm İlçeler') {
       districtSet.add(item.dist);
     }
   });
 
   const sortedDistricts = Array.from(districtSet).sort((a, b) => a.localeCompare(b, 'tr'));
-  return ['Tüm İlçeler', ...sortedDistricts];
+  return ['Tüm Şehirler', ...sortedDistricts];
 }

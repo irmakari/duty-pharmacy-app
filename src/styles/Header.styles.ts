@@ -6,9 +6,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 16 : 8,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'web' ? 14 : (Platform.OS === 'android' ? 16 : 8),
+    paddingBottom: 10,
   },
   headerSubtitleRow: {
     flexDirection: 'row',
@@ -18,22 +18,22 @@ export const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontFamily: FONTS.semiBold,
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.primary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   headerTitle: {
     fontFamily: FONTS.bold,
-    fontSize: 24,
+    fontSize: 22,
     color: COLORS.textPrimary,
   },
   cityPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: COLORS.primaryBorder,
@@ -41,7 +41,7 @@ export const styles = StyleSheet.create({
   },
   cityPillText: {
     fontFamily: FONTS.semiBold,
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.primaryDark,
   },
 });

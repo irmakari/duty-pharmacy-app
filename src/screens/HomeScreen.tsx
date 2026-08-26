@@ -7,7 +7,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
-  Platform
+  Platform,
+  useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -15,9 +16,10 @@ import * as Haptics from 'expo-haptics';
 
 import Header from '../components/Header';
 import SearchBarSection from '../components/SearchBarSection';
-import QuickDistrictChips from '../components/QuickDistrictChips';
+import DutyFilterTabs from '../components/DutyFilterTabs';
+import CityPickerModal from '../components/CityPickerModal';
 import PharmacyCard from '../components/PharmacyCard';
-import FilterModal from '../components/FilterModal';
+import PharmacyDetailView from '../components/PharmacyDetailView';
 import { fetchDutyPharmacies } from '../services/pharmacyApi';
 import { getAvailableDistricts } from '../utils/districtExtractor';
 import { Pharmacy, DutyType, SortByOption, FavoritesMap } from '../types/pharmacy';
@@ -41,19 +43,25 @@ function toTurkishLowerCase(text: string = ''): string {
 }
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   
   // Filter States
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('Tüm İlçeler');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('Tüm Şehirler');
   const [selectedDutyType, setSelectedDutyType] = useState<DutyType>('all');
   const [sortBy, setSortBy] = useState<SortByOption>('distance');
-  const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
+  const [cityModalVisible, setCityModalVisible] = useState<boolean>(false);
   
   // Favorites
   const [favorites, setFavorites] = useState<FavoritesMap>({});
+
+  // Active Pharmacy selection for Split View (Desktop)
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(null);
 
   // Data fetching (with cache & rate limit protection)
   const loadData = useCallback(async (isRefresh: boolean = false) => {
@@ -110,8 +118,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           normDist.includes(normQuery) ||
           normAddr.includes(normQuery);
 
-        // İlçe Filtre Eşleşmesi
+        // İlçe / Şehir Filtre Eşleşmesi
         const matchDistrict =
+          selectedDistrict === 'Tüm Şehirler' ||
           selectedDistrict === 'Tüm İlçeler' ||
           normDist === normSelectedDist ||
           normAddr.includes(normSelectedDist);
@@ -122,6 +131,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             ? true
             : selectedDutyType === 'nobetci'
             ? item.dutyType === '24saat' || item.dutyType === 'gece'
+            : selectedDutyType === 'open'
+            ? item.isOpenNow || item.dutyType === '24saat'
             : item.dutyType === selectedDutyType;
 
         return matchSearch && matchDistrict && matchDuty;
@@ -136,41 +147,80 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       });
   }, [pharmacies, searchQuery, selectedDistrict, selectedDutyType, sortBy]);
 
+  // Masaüstünde seçili eczane belirleme
+  const selectedPharmacy = useMemo(() => {
+    if (!filteredPharmacies.length) return null;
+    return (
+      filteredPharmacies.find(p => p.id === selectedPharmacyId) ||
+      filteredPharmacies[0]
+    );
+  }, [filteredPharmacies, selectedPharmacyId]);
+
   // Aktif filtre kontrolü
   const isFilterActive =
-    selectedDistrict !== 'Tüm İlçeler' ||
+    (selectedDistrict !== 'Tüm Şehirler' && selectedDistrict !== 'Tüm İlçeler') ||
     selectedDutyType !== 'all' ||
     sortBy !== 'distance' ||
     searchQuery.trim() !== '';
 
   const resetFilters = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedDistrict('Tüm İlçeler');
+    setSelectedDistrict('Tüm Şehirler');
     setSelectedDutyType('all');
     setSortBy('distance');
     setSearchQuery('');
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+  const handleCardPress = (item: Pharmacy) => {
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
+    if (isDesktop) {
+      setSelectedPharmacyId(item.id);
+    } else {
+      navigation.navigate('DetailScreen', {
+        pharmacy: item,
+        isFav: !!favorites[item.id],
+      });
+    }
+  };
+  // Dinamik İl & Başlık Hesaplama
+  const currentCityName = useMemo(() => {
+    if (selectedDistrict === 'Tüm Şehirler' || selectedDistrict === 'Tüm İlçeler') {
+      return 'Türkiye';
+    }
+    const found = filteredPharmacies[0] || pharmacies.find(p => p.dist === selectedDistrict);
+    if (found && found.city) {
+      return found.city;
+    }
+    return selectedDistrict;
+  }, [selectedDistrict, filteredPharmacies, pharmacies]);
 
+  const listTitleText = useMemo(() => {
+    if (selectedDistrict === 'Tüm Şehirler' || selectedDistrict === 'Tüm İlçeler') {
+      return 'TÜRKİYE NÖBET LİSTESİ';
+    }
+    return `${currentCityName.toUpperCase()} NÖBET LİSTESİ`;
+  }, [selectedDistrict, currentCityName]);
+
+  // Sol Taraf: Liste Bileşeni
+  const renderLeftList = () => (
+    <View style={{ flex: 1 }}>
       {/* HEADER */}
-      <Header city="İstanbul" listTitle="İstanbul Nöbet Listesi" />
+      <Header city={currentCityName} listTitle={listTitleText} />
 
-      {/* SEARCH BAR & FILTER TRIGGER */}
+      {/* SEARCH BAR & CITY FILTER BUTTON */}
       <SearchBarSection
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        isFilterActive={isFilterActive}
-        onOpenFilter={() => setFilterModalVisible(true)}
+        selectedDistrict={selectedDistrict}
+        onOpenCityPicker={() => setCityModalVisible(true)}
       />
 
-      {/* QUICK DISTRICT CHIPS */}
-      <QuickDistrictChips
-        districts={availableDistricts}
-        selectedDistrict={selectedDistrict}
-        onSelectDistrict={setSelectedDistrict}
+      {/* CHIPS BAR (EN YAKIN, TÜM ECZANELER, NÖBETÇİ ECZANELER, NORMAL ECZANELER) */}
+      <DutyFilterTabs
+        selectedDutyType={selectedDutyType}
+        onSelectDutyType={setSelectedDutyType}
+        sortBy={sortBy}
+        onToggleSort={() => setSortBy(prev => (prev === 'distance' ? 'name' : 'distance'))}
       />
 
       {/* PHARMACY LIST */}
@@ -187,14 +237,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             <PharmacyCard
               item={item}
               isFav={!!favorites[item.id]}
+              isSelected={isDesktop && selectedPharmacy?.id === item.id}
               onToggleFavorite={toggleFavorite}
-              onPressCard={() => {
-                if (Platform.OS !== 'web') Haptics.selectionAsync();
-                navigation.navigate('DetailScreen', {
-                  pharmacy: item,
-                  isFav: !!favorites[item.id],
-                });
-              }}
+              onPressCard={() => handleCardPress(item)}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -210,13 +255,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           ListHeaderComponent={
             <View style={styles.listHeaderSummary}>
               <Text style={styles.listSummaryText}>
-                {filteredPharmacies.length} nöbetçi eczane bulundu
+                {filteredPharmacies.length} eczane bulundu
               </Text>
-              {isFilterActive && (
-                <TouchableOpacity onPress={resetFilters}>
-                  <Text style={styles.resetFiltersText}>Filtreleri Temizle</Text>
-                </TouchableOpacity>
-              )}
             </View>
           }
           ListEmptyComponent={
@@ -235,19 +275,50 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           }
         />
       )}
+    </View>
+  );
 
-      {/* FILTER MODAL */}
-      <FilterModal
-        visible={filterModalVisible}
-        onClose={() => setFilterModalVisible(false)}
-        districts={availableDistricts}
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+
+      {isDesktop ? (
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          {/* MASAÜSTÜ SOL PANEL (LISTE) */}
+          <View style={{ flex: 1, borderRightWidth: 1, borderRightColor: '#E2E8F0' }}>
+            {renderLeftList()}
+          </View>
+
+          {/* MASAÜSTÜ SAĞ PANEL (DETAY & HARİTA) */}
+          <View style={{ flex: 1.2, backgroundColor: '#F8FAFC' }}>
+            {selectedPharmacy ? (
+              <PharmacyDetailView
+                pharmacy={selectedPharmacy}
+                isFav={!!favorites[selectedPharmacy.id]}
+                onToggleFavorite={toggleFavorite}
+                showBackButton={false}
+              />
+            ) : (
+              <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons name="pill" size={48} color={COLORS.textSubtle} />
+                <Text style={styles.emptyTitle}>Eczane Seçiniz</Text>
+                <Text style={styles.emptySubtitle}>
+                  Detaylarını incelemek ve haritada görmek istediğiniz eczaneyi soldaki listeden seçiniz.
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      ) : (
+        renderLeftList()
+      )}
+
+      {/* CITY / DISTRICT PICKER MODAL */}
+      <CityPickerModal
+        visible={cityModalVisible}
+        onClose={() => setCityModalVisible(false)}
         selectedDistrict={selectedDistrict}
-        setSelectedDistrict={setSelectedDistrict}
-        selectedDutyType={selectedDutyType}
-        setSelectedDutyType={setSelectedDutyType}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        onResetFilters={resetFilters}
+        onSelectDistrict={setSelectedDistrict}
       />
     </SafeAreaView>
   );

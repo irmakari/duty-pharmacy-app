@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TextInput, TouchableOpacity, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/theme';
@@ -8,20 +8,22 @@ import { styles } from '../styles/SearchBarSection.styles';
 interface SearchBarSectionProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  isFilterActive: boolean;
-  onOpenFilter: () => void;
+  selectedDistrict: string;
+  onOpenCityPicker: () => void;
 }
 
 export default function SearchBarSection({
   searchQuery,
   setSearchQuery,
-  isFilterActive,
-  onOpenFilter,
+  selectedDistrict,
+  onOpenCityPicker,
 }: SearchBarSectionProps) {
-  const handleFilterPress = () => {
+  const handleCityPress = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onOpenFilter();
+    onOpenCityPicker();
   };
+
+  const isDistrictSelected = selectedDistrict !== 'Tüm Şehirler' && selectedDistrict !== 'Tüm İlçeler';
 
   return (
     <View style={styles.searchBarSection}>
@@ -33,7 +35,6 @@ export default function SearchBarSection({
           placeholderTextColor={COLORS.textSubtle}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          clearButtonMode="while-editing"
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
@@ -43,16 +44,31 @@ export default function SearchBarSection({
       </View>
 
       <TouchableOpacity
-        style={[styles.filterButton, isFilterActive && styles.filterButtonActive]}
-        onPress={handleFilterPress}
+        style={[styles.cityFilterButton, isDistrictSelected && styles.cityFilterButtonActive]}
+        onPress={handleCityPress}
         activeOpacity={0.8}
       >
         <Ionicons
-          name="options-outline"
-          size={20}
-          color={isFilterActive ? '#FFFFFF' : COLORS.primary}
+          name="location"
+          size={16}
+          color={isDistrictSelected ? '#FFFFFF' : COLORS.primary}
+          style={{ marginRight: 5 }}
         />
-        {isFilterActive && <View style={styles.filterActiveDot} />}
+        <Text
+          style={[
+            styles.cityFilterButtonText,
+            isDistrictSelected && styles.cityFilterButtonTextActive,
+          ]}
+          numberOfLines={1}
+        >
+          {selectedDistrict}
+        </Text>
+        <Ionicons
+          name="chevron-down"
+          size={14}
+          color={isDistrictSelected ? '#FFFFFF' : COLORS.primary}
+          style={{ marginLeft: 3 }}
+        />
       </TouchableOpacity>
     </View>
   );

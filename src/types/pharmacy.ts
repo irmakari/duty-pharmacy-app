@@ -1,4 +1,4 @@
-export type DutyType = 'sabit' | '24saat' | 'gece' | 'nobetci' | 'all';
+export type DutyType = 'sabit' | '24saat' | 'gece' | 'nobetci' | 'open' | 'all';
 
 export interface Pharmacy {
   id: string;
