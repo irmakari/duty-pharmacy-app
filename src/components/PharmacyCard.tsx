@@ -11,6 +11,7 @@ interface PharmacyCardProps {
   isFav: boolean;
   onToggleFavorite: (id: string) => void;
   onPressCard: () => void;
+  isSelected?: boolean;
 }
 
 export default function PharmacyCard({
@@ -18,6 +19,7 @@ export default function PharmacyCard({
   isFav,
   onToggleFavorite,
   onPressCard,
+  isSelected = false,
 }: PharmacyCardProps) {
   const getBadgeStyles = (dutyType: '24saat' | 'gece' | 'sabit') => {
     if (dutyType === '24saat') {
@@ -54,10 +56,24 @@ export default function PharmacyCard({
     Linking.openURL(mapUrl);
   };
 
+  const isPhoneAvailable =
+    !!item.phone &&
+    item.phone.trim() !== '' &&
+    !item.phone.toLowerCase().includes('belirtilmedi') &&
+    item.phone !== '-' &&
+    item.phone.toLowerCase() !== 'yok';
+
   return (
     <TouchableOpacity
       activeOpacity={0.88}
-      style={styles.card}
+      style={[
+        styles.card,
+        isSelected && {
+          borderColor: COLORS.primary,
+          borderWidth: 2,
+          backgroundColor: '#F0FDF4',
+        },
+      ]}
       onPress={onPressCard}
     >
       {/* ÜST ROZET VE MESAFE */}
@@ -74,17 +90,19 @@ export default function PharmacyCard({
             <Ionicons name="location-sharp" size={13} color={COLORS.primary} />
             <Text style={styles.distanceText}>{item.distance}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.favButton}
-            onPress={() => onToggleFavorite(item.id)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons
-              name={isFav ? 'heart' : 'heart-outline'}
-              size={20}
-              color={isFav ? COLORS.danger : COLORS.textSubtle}
-            />
-          </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity
+              style={styles.favButton}
+              onPress={() => onToggleFavorite(item.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={isFav ? 'heart' : 'heart-outline'}
+                size={20}
+                color={isFav ? COLORS.danger : COLORS.textSubtle}
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -114,10 +132,12 @@ export default function PharmacyCard({
 
       {/* AKSİYONLAR */}
       <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.actionBtnCall} onPress={handleCall}>
-          <Ionicons name="call" size={15} color="#FFFFFF" />
-          <Text style={styles.actionBtnCallText}>Hemen Ara</Text>
-        </TouchableOpacity>
+        {isPhoneAvailable && (
+          <TouchableOpacity style={styles.actionBtnCall} onPress={handleCall}>
+            <Ionicons name="call" size={15} color="#FFFFFF" />
+            <Text style={styles.actionBtnCallText}>Hemen Ara</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.actionBtnMap} onPress={handleMap}>
           <Feather name="navigation" size={15} color={COLORS.primary} />
